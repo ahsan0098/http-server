@@ -9,22 +9,33 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
 
 	l := log.New(os.Stdout, "product-api", log.LstdFlags)
 
-	// HelloHdlr := handlers.NewHello(l)
-	ProductHdlr := handlers.NewProducts(l)
-	
-	mux := http.NewServeMux()
-	mux.Handle("/products/", ProductHdlr)
-	// mux.Handle("/", HelloHdlr)
-	// mux.Handle("/home", handlers.HomeHdlr())
+	ProductHdlr := handlers.ProductController(l)
+
+	mux := chi.NewRouter()
 
 
-	// creating own server
+	mux.Route("/products", func(r chi.Router) {
+
+		r.Use(ProductHdlr.Validator)
+
+		r.Post("/", ProductHdlr.CreateProduct)
+
+		r.Put("/{id}", ProductHdlr.ProductUpdate)
+	})
+
+	mux.Get("/products", ProductHdlr.GetProducts)
+
+	// use handler only to manage request methods manually
+	// mux.HandleFunc("/products", ProductHdlr.GetProducts)
+
 	server := &http.Server{
 		Addr:         "127.0.0.1:9090",
 		Handler:      mux,

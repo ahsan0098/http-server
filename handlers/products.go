@@ -1,72 +1,28 @@
 package handlers
 
 import (
+	"context"
 	"corenethttp/models"
 	"fmt"
 	"log"
 	"net/http"
-	"regexp"
 	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type Products struct {
 	lg *log.Logger
 }
 
-func NewProducts(l *log.Logger) *Products {
+func ProductController(l *log.Logger) *Products {
 	return &Products{l}
-}
-
-func (p *Products) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	if r.Method == http.MethodGet {
-		p.GetProducts(w, r)
-		return
-	}
-
-	if r.Method == http.MethodPost {
-		p.CreateProduct(w, r)
-		return
-	}
-
-	if r.Method == http.MethodPut {
-
-		reg := regexp.MustCompile(`/products/(\d+)$`)
-		data := reg.FindAllStringSubmatch(r.URL.Path, -1)
-
-		if len(data) != 1 {
-			http.Error(w, "No Url Parameter Passed", 400)
-			return
-
-		}
-
-		if len(data[0]) != 2 {
-			http.Error(w, "Wrong Url Parameters Passed", 400)
-			return
-
-		}
-
-		id, err := strconv.Atoi(data[0][1])
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Invalid Non integer number Passed : %s", data[0][1]), 400)
-			return
-		}
-		p.ProductUpdate(w, r, id)
-		return
-	}
-
-	w.WriteHeader(http.StatusMethodNotAllowed)
 }
 
 func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	p.lg.Print("Products Fetching")
 
 	prods := models.GetProducts()
-
-	// //simple marshling
-	// m, _ := json.Marshal(prods)
-
-	// using Encoder that does not stores but directly passs to io.reader
 
 	err := prods.ToJson(w)
 	if err != nil {
@@ -77,27 +33,21 @@ func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 func (p *Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	p.lg.Print("Products Creating")
 
-	prod := &models.Product{}
-	err := prod.FromJson(r.Body)
-
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error while parsing request body : %v", err), 400)
-	}
+	prod, _ := r.Context().Value(KeyProduct{}).(*models.Product)
 
 	models.AddProduct(prod)
 }
 
-func (p *Products) ProductUpdate(w http.ResponseWriter, r *http.Request, id int) {
+func (p *Products) ProductUpdate(w http.ResponseWriter, r *http.Request) {
 	p.lg.Print("Products Updating")
 
-	prod := &models.Product{}
-	err := prod.FromJson(r.Body)
+	prod, _ := r.Context().Value(KeyProduct{}).(*models.Product)
+
+	id, err := strconv.Atoi(chi.URLParam(r, "id"))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error while parsing request body: %v", err), http.StatusBadRequest)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
-
-	prod.ID = id
 
 	err = models.UpdateProduct(prod, id)
 	if err != nil {
@@ -107,4 +57,21 @@ func (p *Products) ProductUpdate(w http.ResponseWriter, r *http.Request, id int)
 
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "Product updated successfully")
+}
+
+type KeyProduct struct{}
+
+func (p *Products) Validator(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		prod := &models.Product{}
+		err := prod.FromJson(r.Body)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error while parsing request body : %v", err), 400)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), KeyProduct{}, prod)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
