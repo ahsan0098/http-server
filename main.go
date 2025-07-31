@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -23,20 +24,23 @@ func main() {
 
 	ms.HandleFunc("/products", ProductHdlr.GetProducts).Methods("GET")
 
-	
 	postSub := ms.Methods("POST").Subrouter()
 	postSub.Use(ProductHdlr.Validator)
 	postSub.HandleFunc("/products", ProductHdlr.CreateProduct)
 
-	
 	putSub := ms.Methods("PUT").Subrouter()
 	putSub.Use(ProductHdlr.Validator)
 	putSub.HandleFunc("/products/{id:[0-9]+}", ProductHdlr.ProductUpdate)
 
-	
+	corsHandler := gorillahandlers.CORS(
+		gorillahandlers.AllowedOrigins([]string{"*","localhost:5173"}),
+		gorillahandlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		gorillahandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)(ms)
+
 	server := &http.Server{
 		Addr:         "127.0.0.1:9090",
-		Handler:      ms,
+		Handler:      corsHandler,
 		IdleTimeout:  120 * time.Second,
 		ReadTimeout:  1 * time.Second,
 		WriteTimeout: 1 * time.Second,
