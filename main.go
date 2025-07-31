@@ -1,7 +1,13 @@
+// @title CoreNet Product API
+// @version 1.0
+// @description This is a simple API for managing products.
+// @host localhost:9090
+
 package main
 
 import (
 	"context"
+	_ "corenethttp/docs"
 	"corenethttp/handlers"
 	"log"
 	"net/http"
@@ -11,6 +17,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func main() {
@@ -20,7 +27,6 @@ func main() {
 	ProductHdlr := handlers.ProductController(l)
 
 	mux := chi.NewRouter()
-
 
 	mux.Route("/products", func(r chi.Router) {
 
@@ -32,9 +38,8 @@ func main() {
 	})
 
 	mux.Get("/products", ProductHdlr.GetProducts)
-
-	// use handler only to manage request methods manually
-	// mux.HandleFunc("/products", ProductHdlr.GetProducts)
+	mux.Delete("/products/{id}", ProductHdlr.ProductDelete)
+	mux.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	server := &http.Server{
 		Addr:         "127.0.0.1:9090",

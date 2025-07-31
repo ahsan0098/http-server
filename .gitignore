@@ -1,0 +1,33 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Vendor directory (if you use Go modules and don't want to vendor)
+vendor/
+
+# Go workspace file (optional, if you use Go workspaces)
+go.work
+go.work.sum
+
+# Dependency lock file (keep this!)
+# go.sum   <-- Do NOT ignore this!
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs, temp files
+*.log
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+Thumbs.db

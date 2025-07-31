@@ -5,14 +5,35 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/go-playground/validator/v10"
 )
 
+// Product defines the structure for product API responses
+// @Description Product represents an item in the store.
+// @Tags model
 type Product struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Price     int    `json:"price"`
-	CreateAt  string `json:"-"`
+	ID int `json:"id" example:"1"`
+
+	// Name of the product
+	// required: true
+	Name string `json:"name" validate:"required" example:"Apple Watch"`
+
+	// Price of the product in cents
+	// required: true
+	Price int `json:"price" validate:"required,numeric" example:"299"`
+
+	// Creation timestamp (not exposed in response)
+	CreatedAt string `json:"-"`
+
+	// Last updated timestamp (not exposed in response)
 	UpdatedAt string `json:"-"`
+}
+
+func (p *Product) Validate() error {
+	validate := validator.New(validator.WithRequiredStructEnabled())
+
+	return validate.Struct(p)
 }
 
 type Products []*Product
@@ -26,13 +47,25 @@ func AddProduct(p *Product) {
 }
 
 func UpdateProduct(prod *Product, id int) error {
-	
+
 	i, err := findProduct(id)
 	if err != nil {
 		return err
 	}
 
 	productsList[i] = prod
+	return nil
+}
+
+func DeleteProduct(id int) error {
+
+	i, err := findProduct(id)
+	if err != nil {
+		return err
+	}
+
+	productsList = append(productsList[:i], productsList[i+1:]...)
+
 	return nil
 }
 
@@ -62,14 +95,14 @@ var productsList = Products{
 		ID:        1,
 		Name:      "Product 1",
 		Price:     120,
-		CreateAt:  time.Now().UTC().String(),
+		CreatedAt: time.Now().UTC().String(),
 		UpdatedAt: time.Now().UTC().String(),
 	},
 	{
 		ID:        2,
 		Name:      "Product 2",
 		Price:     220,
-		CreateAt:  time.Now().UTC().String(),
+		CreatedAt: time.Now().UTC().String(),
 		UpdatedAt: time.Now().UTC().String(),
 	},
 }
